@@ -57,7 +57,7 @@ td.empty{text-align:center;color:var(--mut);white-space:normal;padding:22px}
 <script>
 const $=id=>document.getElementById(id);
 const F=['sofor','plaka','giris','cikis','bolum','giren','cikan','acik'];
-let rows=[];
+let rows=[],heard='';
 try{rows=JSON.parse(localStorage.getItem('akd')||'[]')}catch(e){}
 const persist=()=>{try{localStorage.setItem('akd',JSON.stringify(rows))}catch(e){}};
 const now=()=>new Date().toLocaleTimeString('tr-TR',{hour:'2-digit',minute:'2-digit'});
@@ -67,8 +67,8 @@ const esc=s=>String(s||'').replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&g
 const KEYS=[['sofor','şoför|soför|sürücü|ad soyad|adı soyadı'],['plaka','plaka'],['giris','giriş|giris'],['cikis','çıkış|cikis'],['bolum','bölümü|bölüm|bolum'],['giren','giren'],['cikan','çıkan|cikan'],['acik','açıklamalar|açıklama|aciklama']];
 const kre=new RegExp('(?:^|\\s)('+KEYS.map(k=>k[1]).join('|')+')(?=\\s|$)','giu');
 const keyOf=w=>{w=w.toLocaleLowerCase('tr');for(const[k,p]of KEYS)if(new RegExp('^('+p+')$','u').test(w))return k};
-const PL=/(\d{2})\s*((?:[a-zçğıöşü]\s?){1,3})\s*(\d{2,4})/iu;
-const fmtPlate=t=>{const m=t.match(PL);return m?`${m[1]} ${m[2].replace(/\s/g,'').toLocaleUpperCase('tr')} ${m[3]}`:null};
+const PL=/(\d{2})\s*((?:[a-zçğıöşü]\s?){1,3})\s*(\d{2,4})(?:\s(\d{1,2})(?!\d))?/iu;
+const fmtPlate=t=>{const m=t.match(PL);return m?`${m[1]} ${m[2].replace(/\s/g,'').toLocaleUpperCase('tr')} ${m[3]+((m[4]&&(m[3]+m[4]).length<=4)?m[4]:'')}`:null};
 function fmtTime(t){t=t.replace(/\bsaat\b/giu,'').trim();
  let m=t.match(/(\d{1,2})\s*[:.]\s*(\d{2})/)||t.match(/(\d{1,2})\s+(\d{2})\b/);
  if(m)return m[1].padStart(2,'0')+':'+m[2];
@@ -95,7 +95,7 @@ function apply(o){
  const isExit=o.cikis&&!o.giris&&p;
  if(isExit){const r=[...rows].reverse().find(r=>r.plaka===p&&!r.cikis);
   if(r){r.cikis=o.cikis;persist();render();$('say').innerHTML='<b>'+esc(p)+'</b> için çıkış saati '+esc(o.cikis)+' yazıldı.';return}}
- if(p&&!o.sofor&&!o.cikis){const g=o.giris||now();rows.push({tarih:today(),sofor:'',plaka:p,giris:g,cikis:'',bolum:o.bolum||'',giren:o.giren||'',cikan:o.cikan||'',acik:o.acik||''});persist();render();$('say').innerHTML='<b>'+esc(p)+'</b> girişi '+esc(g)+' ile kaydedildi.';return}
+ if(p&&!o.sofor&&!o.cikis){const g=o.giris||now();rows.push({tarih:today(),sofor:'',plaka:p,giris:g,cikis:'',bolum:o.bolum||'',giren:o.giren||'',cikan:o.cikan||'',acik:o.acik||''});persist();render();$('say').innerHTML='<b>'+esc(p)+'</b> girişi '+esc(g)+' ile kaydedildi. <small>Duyulan: “'+esc(heard)+'”</small>';return}
  for(const k of F)if(o[k])$('f_'+k).value=o[k];
  if(o.plaka&&!$('f_giris').value&&!o.cikis)$('f_giris').value=now()}
 
@@ -119,10 +119,10 @@ const SR=window.SpeechRecognition||window.webkitSpeechRecognition;
 if(!SR){$('mic').disabled=true;$('say').textContent='Bu tarayıcı ses tanımayı desteklemiyor. Android’de Chrome ile aç.'}
 else{const r=new SR();r.lang='tr-TR';r.interimResults=true;r.continuous=false;let on=false;
  r.onresult=e=>{let t='',fin=false;for(const x of e.results){t+=x[0].transcript;if(x.isFinal)fin=true}
-  $('say').innerHTML='<b>“'+esc(t)+'”</b>';if(fin)apply(parse(t))};
+  $('say').innerHTML='<b>“'+esc(t)+'”</b>';if(fin){heard=t;apply(parse(t))}};
  r.onend=()=>{on=false;$('mic').classList.remove('on')};
  r.onerror=e=>{$('say').textContent=e.error==='not-allowed'?'Mikrofon izni verilmedi. Adres çubuğundaki kilit simgesinden mikrofona izin ver.':'Ses alınamadı ('+e.error+'). Tekrar dene.'};
  $('mic').onclick=()=>{if(on){r.stop();return}try{r.start();on=true;$('mic').classList.add('on');$('say').textContent='Dinliyorum…'}catch(e){}}}
-$('go').onclick=()=>{const t=$('cmd').value.trim();if(t){apply(parse(t));$('cmd').value=''}};
+$('go').onclick=()=>{const t=$('cmd').value.trim();if(t){heard=t;apply(parse(t));$('cmd').value=''}};
 render();
 </script></body></html>
