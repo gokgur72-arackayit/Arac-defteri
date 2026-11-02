@@ -57,7 +57,7 @@ td.empty{text-align:center;color:var(--mut);white-space:normal;padding:22px}
 <script>
 const $=id=>document.getElementById(id);
 const F=['sofor','plaka','giris','cikis','bolum','giren','cikan','acik'];
-let rows=[],heard='';
+let rows=[],heard='',editIdx=null;
 try{rows=JSON.parse(localStorage.getItem('akd')||'[]')}catch(e){}
 const persist=()=>{try{localStorage.setItem('akd',JSON.stringify(rows))}catch(e){}};
 const now=()=>new Date().toLocaleTimeString('tr-TR',{hour:'2-digit',minute:'2-digit'});
@@ -91,10 +91,12 @@ function parse(text){
  return out}
 
 function apply(o){
+ if(editIdx!==null){for(const k of F)if(o[k])$('f_'+k).value=o[k];return}
  const p=o.plaka;
  const isExit=o.cikis&&!o.giris&&p;
  if(isExit){const r=[...rows].reverse().find(r=>r.plaka===p&&!r.cikis);
   if(r){r.cikis=o.cikis;persist();render();$('say').innerHTML='<b>'+esc(p)+'</b> için çıkış saati '+esc(o.cikis)+' yazıldı.';return}}
+ if(p&&!o.giris&&!o.cikis){const r=[...rows].reverse().find(r=>r.plaka===p&&!r.cikis);if(r){let c=0;for(const k of ['sofor','bolum','giren','cikan','acik'])if(o[k]){r[k]=o[k];c++}if(c){persist();render();$('say').innerHTML='<b>'+esc(p)+'</b> kaydı güncellendi.';return}}}
  if(p&&!o.sofor&&!o.cikis){const g=o.giris||now();rows.push({tarih:today(),sofor:'',plaka:p,giris:g,cikis:'',bolum:o.bolum||'',giren:o.giren||'',cikan:o.cikan||'',acik:o.acik||''});persist();render();$('say').innerHTML='<b>'+esc(p)+'</b> girişi '+esc(g)+' ile kaydedildi. <small>Duyulan: “'+esc(heard)+'”</small>';return}
  for(const k of F)if(o[k])$('f_'+k).value=o[k];
  if(o.plaka&&!$('f_giris').value&&!o.cikis)$('f_giris').value=now()}
@@ -102,13 +104,14 @@ function apply(o){
 function render(){
  const tb=$('tb');
  if(!rows.length){tb.innerHTML='<tr><td class="empty" colspan="10">Henüz kayıt yok. Mikrofona basıp ilk aracı kaydet.</td></tr>';return}
- tb.innerHTML=rows.map((r,i)=>`<tr><td>${esc(r.tarih)}</td><td>${esc(r.sofor)}</td><td>${esc(r.plaka)}</td><td>${esc(r.giris)}</td><td>${r.cikis?esc(r.cikis):'<span class="open">içeride</span>'}</td><td>${esc(r.bolum)}</td><td>${esc(r.giren)}</td><td>${esc(r.cikan)}</td><td>${esc(r.acik)}</td><td><button class="x" data-i="${i}" aria-label="Kaydı sil">✕</button></td></tr>`).reverse().join('')}
+ tb.innerHTML=rows.map((r,i)=>`<tr><td>${esc(r.tarih)}</td><td>${esc(r.sofor)}</td><td>${esc(r.plaka)}</td><td>${esc(r.giris)}</td><td>${r.cikis?esc(r.cikis):'<span class="open">içeride</span>'}</td><td>${esc(r.bolum)}</td><td>${esc(r.giren)}</td><td>${esc(r.cikan)}</td><td>${esc(r.acik)}</td><td><button class="x" data-e="${i}" aria-label="Düzenle">✎</button><button class="x" data-i="${i}" aria-label="Kaydı sil">✕</button></td></tr>`).reverse().join('')}
 
-$('tb').onclick=e=>{const i=e.target.dataset.i;if(i!==undefined&&confirm('Bu kayıt silinsin mi?')){rows.splice(+i,1);persist();render()}};
+function edit(i){const r=rows[i];editIdx=i;F.forEach(k=>$('f_'+k).value=r[k]||'');$('save').textContent='Değişikliği kaydet';$('say').textContent='Düzenleniyor: '+(r.plaka||'')+'. Alanları değiştirip kaydet.';window.scrollTo({top:0,behavior:'smooth'})}
+$('tb').onclick=e=>{const ed=e.target.dataset.e;if(ed!==undefined){edit(+ed);return}const i=e.target.dataset.i;if(i!==undefined&&confirm('Bu kayıt silinsin mi?')){rows.splice(+i,1);persist();render()}};
 $('save').onclick=()=>{const r={tarih:today()};F.forEach(k=>r[k]=$('f_'+k).value.trim());
  if(!r.plaka&&!r.sofor){$('say').textContent='Kayıt için en az plaka veya şoför adı gerekli.';return}
- if(!r.giris)r.giris=now();rows.push(r);persist();render();clr();$('say').textContent='Kayıt eklendi.'};
-const clr=()=>F.forEach(k=>$('f_'+k).value='');
+ if(!r.giris)r.giris=now();if(editIdx!==null){r.tarih=rows[editIdx].tarih;rows[editIdx]=r}else rows.push(r);persist();render();clr();$('say').textContent='Kayıt eklendi.'};
+const clr=()=>{F.forEach(k=>$('f_'+k).value='');editIdx=null;$('save').textContent='Kaydı ekle'};
 $('clear').onclick=clr;
 $('csv').onclick=()=>{const h=['Tarih','Şoför','Plaka','Giriş','Çıkış','Bölüm','Giren','Çıkan','Açıklama'];
  const q=v=>'"'+String(v||'').replace(/"/g,'""')+'"';
