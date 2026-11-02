@@ -1,0 +1,127 @@
+<!DOCTYPE html>
+<html lang="tr"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Araç Kayıt Defteri</title><meta name="theme-color" content="#1f4fb4">
+<style>
+:root{--bg:#eceef0;--paper:#fafbfb;--ink:#1b2430;--mut:#667180;--line:#c9cfd6;--blue:#1f4fb4;--red:#b3322b;box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){--bg:#14181d;--paper:#1c2128;--ink:#e6e9ed;--mut:#8b95a3;--line:#323a45;--blue:#6b95f0;--red:#ef7b73}}
+*{box-sizing:border-box}html{scroll-padding-top:env(safe-area-inset-top,0px)}
+body{margin:0;background:var(--bg);color:var(--ink);font:16px/1.45 system-ui,-apple-system,"Segoe UI",Roboto,sans-serif}
+main{max-width:980px;margin:0 auto;padding:16px}
+h1{font-size:1.5rem;margin:4px 0 2px;letter-spacing:-.01em}
+.sub{color:var(--mut);margin:0 0 16px;font-size:.9rem}
+.mic{display:flex;gap:14px;align-items:center;background:var(--paper);border:1px solid var(--line);border-left:5px solid var(--blue);padding:14px}
+#mic{flex:none;width:68px;height:68px;border-radius:50%;border:0;background:var(--blue);color:#fff;font-size:28px;cursor:pointer}
+#mic.on{background:var(--red);animation:p 1s infinite}
+@keyframes p{50%{box-shadow:0 0 0 12px rgba(179,50,43,.2)}}
+@media (prefers-reduced-motion:reduce){#mic.on{animation:none}}
+#say{flex:1;min-height:48px;color:var(--mut)}#say b{color:var(--ink);font-weight:600}
+.hint{font-size:.82rem;color:var(--mut);margin:8px 2px 16px}
+.grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:10px;background:var(--paper);border:1px solid var(--line);padding:14px}
+label{display:block;font-size:.8rem;color:var(--mut);margin-bottom:3px}
+input{width:100%;font:inherit;color:var(--ink);background:transparent;border:0;border-bottom:1.5px solid var(--line);padding:6px 2px;border-radius:0}
+input:focus{outline:2px solid var(--blue);outline-offset:1px;border-color:var(--blue)}
+.wide{grid-column:1/-1}
+.row{display:flex;gap:10px;margin:12px 0;flex-wrap:wrap}
+button.b{font:inherit;padding:10px 16px;border:1.5px solid var(--blue);background:var(--blue);color:#fff;cursor:pointer;border-radius:3px}
+button.g{background:transparent;color:var(--blue)}
+.tw{overflow-x:auto;background:var(--paper);border:1px solid var(--line)}
+table{border-collapse:collapse;width:100%;min-width:760px;font-size:.9rem}
+th,td{border-bottom:1px solid var(--line);border-right:1px solid var(--line);padding:7px 8px;text-align:left;white-space:nowrap}
+th{font-weight:600;color:var(--mut);font-size:.8rem}
+td.empty{text-align:center;color:var(--mut);white-space:normal;padding:22px}
+.open{color:var(--red);font-weight:600}
+.x{border:0;background:none;color:var(--mut);cursor:pointer;font-size:16px}
+</style></head><body><main>
+<h1>Araç Kayıt Defteri</h1>
+<p class="sub">Form No 76 · Mikrofona bas, konuş, alanlar kendiliğinden dolsun.</p>
+
+<div class="mic"><button id="mic" aria-label="Dinlemeyi başlat">🎤</button><div id="say">Konuşmak için mikrofona bas.</div></div>
+<p class="hint">Örnek: “şoför Ahmet Yılmaz plaka 34 ABC 123 bölüm lojistik giren palet açıklama sevkiyat”. Çıkış için: “34 ABC 123 çıkış”. Giriş saati söylemezsen şimdiki saat yazılır.</p>
+
+<div class="grid" style="margin-bottom:10px"><div class="wide"><label for="cmd">Konuşma kutusu: klavyedeki 🎤 ile konuş, sonra “Alanlara dağıt”a bas</label><input id="cmd" placeholder="şoför Ahmet Yılmaz plaka 34 ABC 123 bölüm lojistik"></div><div class="wide"><button class="b" id="go">Alanlara dağıt</button></div></div>
+<div class="grid">
+<div class="wide"><label for="f_sofor">Şoförün adı soyadı</label><input id="f_sofor"></div>
+<div><label for="f_plaka">Plaka no</label><input id="f_plaka"></div>
+<div><label for="f_giris">Giriş saati</label><input id="f_giris" placeholder="08:30"></div>
+<div><label for="f_cikis">Çıkış saati</label><input id="f_cikis" placeholder="17:00"></div>
+<div><label for="f_bolum">Bölümü</label><input id="f_bolum"></div>
+<div><label for="f_giren">Giren malzeme</label><input id="f_giren"></div>
+<div><label for="f_cikan">Çıkan malzeme</label><input id="f_cikan"></div>
+<div class="wide"><label for="f_acik">Açıklamalar</label><input id="f_acik"></div>
+</div>
+<div class="row"><button class="b" id="save">Kaydı ekle</button><button class="b g" id="clear">Alanları temizle</button><button class="b g" id="csv">CSV indir</button></div>
+
+<div class="tw"><table><thead><tr><th>Tarih</th><th>Şoför</th><th>Plaka</th><th>Giriş</th><th>Çıkış</th><th>Bölüm</th><th>Giren</th><th>Çıkan</th><th>Açıklama</th><th></th></tr></thead><tbody id="tb"></tbody></table></div>
+</main>
+<script>
+const $=id=>document.getElementById(id);
+const F=['sofor','plaka','giris','cikis','bolum','giren','cikan','acik'];
+let rows=[];
+try{rows=JSON.parse(localStorage.getItem('akd')||'[]')}catch(e){}
+const persist=()=>{try{localStorage.setItem('akd',JSON.stringify(rows))}catch(e){}};
+const now=()=>new Date().toLocaleTimeString('tr-TR',{hour:'2-digit',minute:'2-digit'});
+const today=()=>new Date().toLocaleDateString('tr-TR');
+const esc=s=>String(s||'').replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+
+const KEYS=[['sofor','şoför|soför|sürücü|ad soyad|adı soyadı'],['plaka','plaka'],['giris','giriş|giris'],['cikis','çıkış|cikis'],['bolum','bölümü|bölüm|bolum'],['giren','giren'],['cikan','çıkan|cikan'],['acik','açıklamalar|açıklama|aciklama']];
+const kre=new RegExp('(?:^|\\s)('+KEYS.map(k=>k[1]).join('|')+')(?=\\s|$)','giu');
+const keyOf=w=>{w=w.toLocaleLowerCase('tr');for(const[k,p]of KEYS)if(new RegExp('^('+p+')$','u').test(w))return k};
+const PL=/(\d{2})\s*([a-zçğıöşü]{1,3})\s*(\d{2,4})/iu;
+const fmtPlate=t=>{const m=t.match(PL);return m?`${m[1]} ${m[2].toLocaleUpperCase('tr')} ${m[3]}`:null};
+function fmtTime(t){t=t.replace(/\bsaat\b/giu,'').trim();
+ let m=t.match(/(\d{1,2})\s*[:.]\s*(\d{2})/)||t.match(/(\d{1,2})\s+(\d{2})\b/);
+ if(m)return m[1].padStart(2,'0')+':'+m[2];
+ m=t.match(/(\d{1,2})\s*(buçuk)?/u);if(m)return m[1].padStart(2,'0')+(m[2]?':30':':00');return null}
+
+function parse(text){
+ const out={};const ms=[...text.matchAll(kre)];
+ if(!ms.length){const p=fmtPlate(text);
+  if(p){out.plaka=p;const pre=text.split(PL)[0].trim();if(pre)out.sofor=pre}
+  else out.acik=text.trim();return out}
+ const pre=text.slice(0,ms[0].index).trim();
+ const pp=fmtPlate(pre);if(pp){out.plaka=pp;const n=pre.split(PL)[0].trim();if(n)out.sofor=n}else if(pre)out.sofor=pre;
+ ms.forEach((m,i)=>{const k=keyOf(m[1]);const s=m.index+m[0].length;const e=i+1<ms.length?ms[i+1].index:text.length;
+  let v=text.slice(s,e).trim();
+  if(k==='plaka')v=fmtPlate(v)||v.toLocaleUpperCase('tr');
+  if(k==='giris'||k==='cikis'){const t=fmtTime(v);v=t||(v?v:'')}
+  if(!v&&(k==='giris'||k==='cikis'))v=now();
+  if(v)out[k]=v});
+ if(!out.plaka){const p=fmtPlate(text);if(p)out.plaka=p}
+ return out}
+
+function apply(o){
+ const p=o.plaka;
+ const isExit=o.cikis&&!o.giris&&p;
+ if(isExit){const r=[...rows].reverse().find(r=>r.plaka===p&&!r.cikis);
+  if(r){r.cikis=o.cikis;persist();render();$('say').innerHTML='<b>'+esc(p)+'</b> için çıkış saati '+esc(o.cikis)+' yazıldı.';return}}
+ for(const k of F)if(o[k])$('f_'+k).value=o[k];
+ if(o.plaka&&!$('f_giris').value&&!o.cikis)$('f_giris').value=now()}
+
+function render(){
+ const tb=$('tb');
+ if(!rows.length){tb.innerHTML='<tr><td class="empty" colspan="10">Henüz kayıt yok. Mikrofona basıp ilk aracı kaydet.</td></tr>';return}
+ tb.innerHTML=rows.map((r,i)=>`<tr><td>${esc(r.tarih)}</td><td>${esc(r.sofor)}</td><td>${esc(r.plaka)}</td><td>${esc(r.giris)}</td><td>${r.cikis?esc(r.cikis):'<span class="open">içeride</span>'}</td><td>${esc(r.bolum)}</td><td>${esc(r.giren)}</td><td>${esc(r.cikan)}</td><td>${esc(r.acik)}</td><td><button class="x" data-i="${i}" aria-label="Kaydı sil">✕</button></td></tr>`).reverse().join('')}
+
+$('tb').onclick=e=>{const i=e.target.dataset.i;if(i!==undefined&&confirm('Bu kayıt silinsin mi?')){rows.splice(+i,1);persist();render()}};
+$('save').onclick=()=>{const r={tarih:today()};F.forEach(k=>r[k]=$('f_'+k).value.trim());
+ if(!r.plaka&&!r.sofor){$('say').textContent='Kayıt için en az plaka veya şoför adı gerekli.';return}
+ if(!r.giris)r.giris=now();rows.push(r);persist();render();clr();$('say').textContent='Kayıt eklendi.'};
+const clr=()=>F.forEach(k=>$('f_'+k).value='');
+$('clear').onclick=clr;
+$('csv').onclick=()=>{const h=['Tarih','Şoför','Plaka','Giriş','Çıkış','Bölüm','Giren','Çıkan','Açıklama'];
+ const q=v=>'"'+String(v||'').replace(/"/g,'""')+'"';
+ const c='\ufeff'+[h.map(q).join(';'),...rows.map(r=>[r.tarih,r.sofor,r.plaka,r.giris,r.cikis,r.bolum,r.giren,r.cikan,r.acik].map(q).join(';'))].join('\n');
+ const a=document.createElement('a');a.href=URL.createObjectURL(new Blob([c],{type:'text/csv'}));a.download='arac-kayit-defteri.csv';a.click()};
+
+const SR=window.SpeechRecognition||window.webkitSpeechRecognition;
+if(!SR){$('mic').disabled=true;$('say').textContent='Bu tarayıcı ses tanımayı desteklemiyor. Android’de Chrome ile aç.'}
+else{const r=new SR();r.lang='tr-TR';r.interimResults=true;r.continuous=false;let on=false;
+ r.onresult=e=>{let t='',fin=false;for(const x of e.results){t+=x[0].transcript;if(x.isFinal)fin=true}
+  $('say').innerHTML='<b>“'+esc(t)+'”</b>';if(fin)apply(parse(t))};
+ r.onend=()=>{on=false;$('mic').classList.remove('on')};
+ r.onerror=e=>{$('say').textContent=e.error==='not-allowed'?'Mikrofon izni verilmedi. Adres çubuğundaki kilit simgesinden mikrofona izin ver.':'Ses alınamadı ('+e.error+'). Tekrar dene.'};
+ $('mic').onclick=()=>{if(on){r.stop();return}try{r.start();on=true;$('mic').classList.add('on');$('say').textContent='Dinliyorum…'}catch(e){}}}
+$('go').onclick=()=>{const t=$('cmd').value.trim();if(t){apply(parse(t));$('cmd').value=''}};
+render();
+</script></body></html>
